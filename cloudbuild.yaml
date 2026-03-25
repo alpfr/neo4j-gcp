@@ -1,4 +1,17 @@
 steps:
+  # Pull Neo4j from Docker Hub and push to GCR
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'pull-neo4j'
+    args: ['pull', 'neo4j:5-community']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'tag-neo4j'
+    args: ['tag', 'neo4j:5-community', 'gcr.io/$PROJECT_ID/neo4j:latest']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-neo4j'
+    args: ['push', 'gcr.io/$PROJECT_ID/neo4j:latest']
+
   - name: 'gcr.io/cloud-builders/gcloud'
     id: 'create-cluster'
     args:
