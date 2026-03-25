@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: neo4j
-          image: gcr.io/PROJECT_ID/neo4j:latest
+          image: gcr.io/alpfr-splunk-integration/neo4j:latest
           envFrom:
             - configMapRef:
                 name: neo4j-config
