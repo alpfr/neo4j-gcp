@@ -21,9 +21,15 @@ steps:
       - 'neo4j-cluster'
       - '--zone=us-east4-a'
 
-  - name: 'gcr.io/cloud-builders/kubectl'
+  # Install Istio using istioctl
+  - name: 'gcr.io/cloud-builders/gcloud'
     id: 'install-istio'
-    args: ['apply', '-f', 'https://github.com/istio/istio/releases/download/1.20.0/istio-crds.yaml']
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        curl -L https://istio.io/downloadIstio | ISTIO_VERSION=1.20.0 sh -
+        ./istio-1.20.0/bin/istioctl install --set profile=default -y
     env:
       - 'CLOUDSDK_COMPUTE_ZONE=us-east4-a'
       - 'CLOUDSDK_CONTAINER_CLUSTER=neo4j-cluster'
