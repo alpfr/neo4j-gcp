@@ -1,0 +1,36 @@
+steps:
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: 'create-cluster'
+    args:
+      - 'container'
+      - 'clusters'
+      - 'create'
+      - 'neo4j-cluster'
+      - '--zone=us-east4-a'
+      - '--num-nodes=2'
+      - '--machine-type=e2-medium'
+      - '--disk-size=50GB'
+    allowFailure: true
+
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: 'get-credentials'
+    args:
+      - 'container'
+      - 'clusters'
+      - 'get-credentials'
+      - 'neo4j-cluster'
+      - '--zone=us-east4-a'
+
+  - name: 'gcr.io/cloud-builders/kubectl'
+    id: 'install-istio'
+    args: ['apply', '-f', 'https://github.com/istio/istio/releases/download/1.20.0/istio-crds.yaml']
+    env:
+      - 'CLOUDSDK_COMPUTE_ZONE=us-east4-a'
+      - 'CLOUDSDK_CONTAINER_CLUSTER=neo4j-cluster'
+
+  - name: 'gcr.io/cloud-builders/kubectl'
+    id: 'deploy'
+    args: ['apply', '-f', 'k8s/']
+    env:
+      - 'CLOUDSDK_COMPUTE_ZONE=us-east4-a'
+      - 'CLOUDSDK_CONTAINER_CLUSTER=neo4j-cluster'

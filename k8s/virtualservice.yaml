@@ -1,0 +1,26 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: neo4j-vs
+  namespace: neo4j
+spec:
+  hosts:
+    - "neo4j.example.com"
+  gateways:
+    - neo4j-gateway
+  http:
+    - match:
+        - port: 80
+      route:
+        - destination:
+            host: neo4j-http
+            port:
+              number: 7474
+  tcp:
+    - match:
+        - port: 7687
+      route:
+        - destination:
+            host: neo4j-http
+            port:
+              number: 7687
