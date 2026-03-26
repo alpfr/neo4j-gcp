@@ -207,9 +207,34 @@ Login credentials:
 
 ---
 
-## Step 8: Connect via Bolt Protocol
+## Step 8: Connect to the Database (Port 7687)
 
-### 8.1 Update the Python client
+Neo4j uses the **Bolt protocol** on port `7687` for all application and driver connections. This is the primary database connection port.
+
+### Connection Details
+
+| Parameter | Value |
+|-----------|-------|
+| **Protocol** | `bolt://` (unencrypted) or `bolt+s://` (TLS) |
+| **Host** | `<EXTERNAL_IP>` from Step 6.2 |
+| **Port** | `7687` |
+| **Username** | `neo4j` |
+| **Password** | the password set in `k8s/secret.yaml` |
+
+### 8.1 Test connectivity with Cypher Shell
+
+```bash
+# From a machine with neo4j tools installed
+cypher-shell -a bolt://<EXTERNAL_IP>:7687 -u neo4j -p YOUR_PASSWORD
+```
+
+Once connected:
+```cypher
+RETURN "Connected!" AS status;
+:exit
+```
+
+### 8.2 Connect with Python
 
 Edit `neo4j_client.py` — replace the IP with your external IP:
 
@@ -218,7 +243,7 @@ URI = "bolt://<EXTERNAL_IP>:7687"
 AUTH = ("neo4j", "YOUR_PASSWORD")
 ```
 
-### 8.2 Run the client
+Run:
 
 ```bash
 python3.11 neo4j_client.py
@@ -232,6 +257,101 @@ Created node: Alice
 Total nodes in database: 1
 Connection closed.
 ```
+
+### 8.3 Connect with JavaScript/Node.js
+
+```bash
+npm install neo4j-driver
+```
+
+```javascript
+const neo4j = require("neo4j-driver");
+
+const driver = neo4j.driver(
+  "bolt://<EXTERNAL_IP>:7687",
+  neo4j.auth.basic("neo4j", "YOUR_PASSWORD")
+);
+
+const session = driver.session();
+const result = await session.run("MATCH (n) RETURN count(n) AS count");
+console.log(`Nodes: ${result.records[0].get("count")}`);
+
+await session.close();
+await driver.close();
+```
+
+### 8.4 Connect with Java
+
+```xml
+<!-- Maven dependency -->
+<dependency>
+  <groupId>org.neo4j.driver</groupId>
+  <artifactId>neo4j-java-driver</artifactId>
+  <version>5.18.0</version>
+</dependency>
+```
+
+```java
+import org.neo4j.driver.*;
+
+try (var driver = GraphDatabase.driver(
+    "bolt://<EXTERNAL_IP>:7687",
+    AuthTokens.basic("neo4j", "YOUR_PASSWORD"))) {
+    try (var session = driver.session()) {
+        var result = session.run("MATCH (n) RETURN count(n) AS count");
+        System.out.println("Nodes: " + result.single().get("count").asInt());
+    }
+}
+```
+
+### 8.5 Connect with Go
+
+```bash
+go get github.com/neo4j/neo4j-go-driver/v5
+```
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "github.com/neo4j/neo4j-go-driver/v5/neo4j"
+)
+
+func main() {
+    ctx := context.Background()
+    driver, _ := neo4j.NewDriverWithContext(
+        "bolt://<EXTERNAL_IP>:7687",
+        neo4j.BasicAuth("neo4j", "YOUR_PASSWORD", ""),
+    )
+    defer driver.Close(ctx)
+
+    session := driver.NewSession(ctx, neo4j.SessionConfig{})
+    defer session.Close(ctx)
+
+    result, _ := session.Run(ctx, "MATCH (n) RETURN count(n) AS count", nil)
+    record, _ := result.Single(ctx)
+    fmt.Printf("Nodes: %d\n", record.Values[0])
+}
+```
+
+### 8.6 Connect from Neo4j Desktop
+
+1. Open Neo4j Desktop
+2. Click **Add** > **Remote connection**
+3. Enter: `bolt://<EXTERNAL_IP>:7687`
+4. Username: `neo4j`, Password: your password
+5. Click **Connect**
+
+### 8.7 Troubleshooting connections
+
+| Issue | Solution |
+|-------|----------|
+| `Connection refused` | Check firewall rule allows TCP 7687: `gcloud compute firewall-rules list` |
+| `Authentication failed` | Verify password matches `k8s/secret.yaml` |
+| `Connection timed out` | Verify pod is running: `kubectl get pods -n neo4j-gcp` |
+| `ServiceUnavailable` | Check service has external IP: `kubectl get svc neo4j-http -n neo4j-gcp` |
 
 ---
 
