@@ -34,22 +34,44 @@ steps:
       - 'neo4j-cluster'
       - '--zone=us-east4-a'
 
-  # Install Istio using istioctl
-  - name: 'gcr.io/cloud-builders/gcloud'
-    id: 'install-istio'
-    entrypoint: 'bash'
+  # Install cert-manager for TLS
+  - name: 'gcr.io/cloud-builders/kubectl'
+    id: 'install-cert-manager'
     args:
-      - '-c'
-      - |
-        curl -L https://istio.io/downloadIstio | ISTIO_VERSION=1.20.0 sh -
-        ./istio-1.20.0/bin/istioctl install --set profile=default -y
+      - 'apply'
+      - '-f'
+      - 'https://github.com/cert-manager/cert-manager/releases/download/v1.14.4/cert-manager.yaml'
     env:
       - 'CLOUDSDK_COMPUTE_ZONE=us-east4-a'
       - 'CLOUDSDK_CONTAINER_CLUSTER=neo4j-cluster'
 
+  # Wait for cert-manager to be ready
+  - name: 'gcr.io/cloud-builders/kubectl'
+    id: 'wait-cert-manager'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        kubectl wait --for=condition=Available deployment/cert-manager-webhook \
+          -n cert-manager --timeout=120s
+    env:
+      - 'CLOUDSDK_COMPUTE_ZONE=us-east4-a'
+      - 'CLOUDSDK_CONTAINER_CLUSTER=neo4j-cluster'
+
+  # Create namespace first
+  - name: 'gcr.io/cloud-builders/kubectl'
+    id: 'create-namespace'
+    args: ['apply', '-f', 'k8s/namespace.yaml']
+    env:
+      - 'CLOUDSDK_COMPUTE_ZONE=us-east4-a'
+      - 'CLOUDSDK_CONTAINER_CLUSTER=neo4j-cluster'
+
+  # Deploy all resources
   - name: 'gcr.io/cloud-builders/kubectl'
     id: 'deploy'
     args: ['apply', '-f', 'k8s/']
     env:
       - 'CLOUDSDK_COMPUTE_ZONE=us-east4-a'
       - 'CLOUDSDK_CONTAINER_CLUSTER=neo4j-cluster'
+
+timeout: '1800s'

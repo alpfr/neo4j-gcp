@@ -1,0 +1,29 @@
+---
+# ServiceMonitor for Prometheus scraping
+apiVersion: monitoring.googleapis.com/v1
+kind: PodMonitoring
+metadata:
+  name: neo4j-metrics
+  namespace: neo4j-gcp
+  labels:
+    app: neo4j
+spec:
+  selector:
+    matchLabels:
+      app: neo4j
+  endpoints:
+    - port: metrics
+      interval: 30s
+      path: /metrics
+---
+# ConfigMap to enable Neo4j Prometheus metrics
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: neo4j-metrics-config
+  namespace: neo4j-gcp
+data:
+  NEO4J_server_metrics_enabled: "true"
+  NEO4J_server_metrics_prometheus_enabled: "true"
+  NEO4J_server_metrics_prometheus_endpoint: "0.0.0.0:2004"
+  NEO4J_server_metrics_filter: "*"

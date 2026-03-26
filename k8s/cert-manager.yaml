@@ -1,0 +1,30 @@
+---
+# ClusterIssuer for Let's Encrypt
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: admin@example.com
+    privateKeySecretRef:
+      name: letsencrypt-prod-key
+    solvers:
+      - http01:
+          ingress:
+            class: nginx
+---
+# Certificate for Neo4j
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: neo4j-tls
+  namespace: neo4j-gcp
+spec:
+  secretName: neo4j-tls-secret
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - neo4j.example.com

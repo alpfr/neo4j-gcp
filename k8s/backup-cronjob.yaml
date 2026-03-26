@@ -1,0 +1,72 @@
+---
+# PVC for storing backups
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: neo4j-backups
+  namespace: neo4j-gcp
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 20Gi
+---
+# CronJob to run daily backups at 2:00 AM
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: neo4j-backup
+  namespace: neo4j-gcp
+spec:
+  schedule: "0 2 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backupOffLimitSeconds: 600
+      template:
+        spec:
+          containers:
+            - name: neo4j-backup
+              image: neo4j:5-community
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+                  BACKUP_DIR=/backups/${TIMESTAMP}
+                  mkdir -p ${BACKUP_DIR}
+
+                  echo "Starting Neo4j backup at ${TIMESTAMP}..."
+
+                  # Dump the neo4j database
+                  neo4j-admin database dump neo4j --to-path=${BACKUP_DIR}
+
+                  echo "Backup completed: ${BACKUP_DIR}"
+                  ls -lh ${BACKUP_DIR}/
+
+                  # Clean up backups older than 7 days
+                  find /backups -maxdepth 1 -type d -mtime +7 -exec rm -rf {} +
+                  echo "Cleaned up backups older than 7 days."
+              volumeMounts:
+                - name: data
+                  mountPath: /data
+                  readOnly: true
+                - name: backups
+                  mountPath: /backups
+              resources:
+                requests:
+                  memory: "256Mi"
+                  cpu: "100m"
+                limits:
+                  memory: "512Mi"
+                  cpu: "250m"
+          restartPolicy: OnFailure
+          volumes:
+            - name: data
+              persistentVolumeClaim:
+                claimName: data-neo4j-0
+            - name: backups
+              persistentVolumeClaim:
+                claimName: neo4j-backups
