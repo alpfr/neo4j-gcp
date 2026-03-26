@@ -482,6 +482,84 @@ kubectl logs job/manual-backup -n neo4j-gcp
 
 ---
 
+## Alternative: Deploy to a VM (Compute Engine)
+
+If you prefer running Neo4j on a VM instead of GKE, use the provided scripts.
+
+### Quick deploy
+
+```bash
+chmod +x deploy-vm.sh
+./deploy-vm.sh
+```
+
+This creates a Compute Engine VM with Neo4j running as a Docker container.
+
+### Custom deploy
+
+```bash
+./deploy-vm.sh <PROJECT_ID> <ZONE> <INSTANCE_NAME>
+
+# Example:
+./deploy-vm.sh alpfr-splunk-integration us-east4-a neo4j-vm
+```
+
+### What the script does
+
+| Step | Action |
+|------|--------|
+| 1 | Sets the GCP project |
+| 2 | Creates a Compute Engine VM with Neo4j container (`e2-medium`, 50GB disk) |
+| 3 | Creates firewall rules for ports 7474 and 7687 |
+| 4 | Retrieves the VM external IP |
+| 5 | Waits for Neo4j to become ready |
+| 6 | Prints connection details |
+
+### Access after deployment
+
+The script outputs the connection details:
+
+```
+Neo4j Browser:  http://<VM_EXTERNAL_IP>:7474
+Bolt URI:       bolt://<VM_EXTERNAL_IP>:7687
+Username:       neo4j
+Password:       PassW0rdOne
+```
+
+### SSH into the VM
+
+```bash
+gcloud compute ssh neo4j-vm --zone=us-east4-a --project=alpfr-splunk-integration
+```
+
+### View container logs on the VM
+
+```bash
+gcloud compute ssh neo4j-vm --zone=us-east4-a --project=alpfr-splunk-integration \
+  -- 'sudo docker logs $(sudo docker ps -q)'
+```
+
+### Destroy the VM deployment
+
+```bash
+chmod +x destroy-vm.sh
+./destroy-vm.sh
+```
+
+### GKE vs VM comparison
+
+| Feature | GKE (Kubernetes) | VM (Compute Engine) |
+|---------|-------------------|---------------------|
+| **Setup complexity** | Medium | Simple |
+| **Auto-healing** | Yes (StatefulSet) | No |
+| **Scaling** | Easy (Enterprise) | Manual |
+| **TLS/Monitoring** | Built-in K8s tools | Manual setup |
+| **Cost** | Higher (cluster overhead) | Lower (single VM) |
+| **Persistent storage** | PVC (auto-provisioned) | Boot disk |
+| **Best for** | Production | Dev/Testing |
+
+---
+
 ## Troubleshooting
 
 ### Pod stuck in Pending

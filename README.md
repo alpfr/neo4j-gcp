@@ -87,8 +87,11 @@ This project deploys a Neo4j graph database on Google Kubernetes Engine (GKE) us
 ```
 neo4j-gke/
 ├── cloudbuild.yaml          # Cloud Build CI/CD pipeline
+├── deploy-vm.sh             # Deploy Neo4j to Compute Engine VM
+├── destroy-vm.sh            # Tear down VM deployment
 ├── neo4j_client.py          # Python client for Neo4j access
 ├── load_sample_data.py      # Load 20 sample records
+├── INSTALLATION.md          # Step-by-step installation guide
 ├── README.md                # This file
 └── k8s/
     ├── namespace.yaml       # neo4j-gcp namespace
